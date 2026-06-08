@@ -1,0 +1,35 @@
+# GCP service account key — never commit
+service-account.json
+*.json.key
+
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# dbt
+dbt_fhir/target/
+dbt_fhir/logs/
+dbt_fhir/.user.yml
+
+# Airflow / Astro
+airflow_settings.yaml
+.astro/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.idea/
+.antigravity/

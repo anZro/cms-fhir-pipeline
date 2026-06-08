@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: silver
+    database: "{{ env_var('GCP_PROJECT_ID') }}"
+    schema: bcda_fhir
+    tables:
+      - name: silver_patient
+        description: "Flattened Patient FHIR resources — demographics"
+      - name: silver_coverage
+        description: "Flattened Coverage FHIR resources — Medicare enrollment and dual eligibility"
+      - name: silver_eob
+        description: "Flattened ExplanationOfBenefit FHIR resources — claims, diagnoses, procedures, payments"
