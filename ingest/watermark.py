@@ -47,14 +47,14 @@ if __name__ == "__main__":
     current = read_watermark(gcs_client)
     logger.info("current_watermark", value=current)
 
+    ''' 
     # hardcoded test — confirm GCS read/write works before running full export
     test_timestamp = "2025-11-12T12:10:07.068Z"
     write_watermark(gcs_client, transaction_time=test_timestamp)
-
     ''' 
+    
     from ingest.auth import get_token
     from ingest.export import start_export, poll_job
-      
     # get a real transaction_time from BCDA
     token = get_token()
     job_url = start_export(token, since=current)
@@ -62,7 +62,7 @@ if __name__ == "__main__":
    
     # write watermark to GCS
     write_watermark(gcs_client, transaction_time=result.transaction_time)
-    '''
+
     
     # confirm watermark is persisted
     confirmed = read_watermark(gcs_client)
