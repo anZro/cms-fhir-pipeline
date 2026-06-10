@@ -11,7 +11,8 @@ logger = structlog.get_logger(__name__)
 GCS_BUCKET = os.getenv("GCS_BUCKET")
 
 def download_to_gcs(token, url: str, resource_type: str, transaction_time: str, gcs_client, bucket_name:str = GCS_BUCKET):
-    gcs_path = f"bronze/{resource_type}/{transaction_time}/{resource_type}.ndjson"
+    filename = url.split("/")[-1].replace(".ndjson", "")
+    gcs_path = f"bronze/{resource_type}/{transaction_time}/{filename}.ndjson"
     bucket = gcs_client.bucket(bucket_name)
     blob = bucket.blob(gcs_path)
 
@@ -76,7 +77,10 @@ if __name__ == "__main__":
     #get a real watermark from BCDA
     token = get_token()
     job_url = start_export(token, since=current)
-    result = poll_job(token, job_url)
+    result = poll_job(token, job_url,
+        client_id=os.getenv("BCDA_CLIENT_ID"),
+        client_secret=os.getenv("BCDA_CLIENT_SECRET")
+    )
 
     #write new watermark to GCS
     write_watermark(gcs_client, transaction_time=result.transaction_time)
