@@ -22,33 +22,32 @@ def flatten_coverage(record: dict) -> dict:
 
     # class array — filter where type.coding[0].code == "plan" → value
     medicare_part   = next((c["value"]
-                    for c in record.get("class", [])
-                    if c.get("type", {}).get("coding", [{}])[0].get("code") == "plan"),
-                    None)
+                        for c in record.get("class", [])
+                        if c.get("type", {}).get("coding", [{}])[0].get("code") == "plan"), None)
 
     #schema reserved values
     period_start    = record.get("period", {}).get("start")
     period_end      = record.get("period", {}).get("end")
     dual_eligible   = next((ext["valueCoding"]["code"]
-                    for ext in record.get("extension", [])
-                    if "dual_eligible" in ext.get("url", "")), None)
+                        for ext in record.get("extension", [])
+                        if "dual_eligible" in ext.get("url", "")), None)
     
     # extension filters
     ms_cd_code      = next((ext["valueCoding"]["code"]
-                    for ext in record.get("extension", [])
-                    if "ms_cd" in ext.get("url", "")), None)
+                        for ext in record.get("extension", [])
+                        if "ms_cd" in ext.get("url", "")), None)
 
     ms_cd_display   = next((ext["valueCoding"]["display"]
-                    for ext in record.get("extension", [])
-                    if "ms_cd" in ext.get("url", "")), None)
+                        for ext in record.get("extension", [])
+                        if "ms_cd" in ext.get("url", "")), None)
 
     termination_code = next((ext["valueCoding"]["code"]
-                    for ext in record.get("extension", [])
-                    if "a_trm_cd" in ext.get("url", "")), None)
+                        for ext in record.get("extension", [])
+                        if "a_trm_cd" in ext.get("url", "")), None)
 
     reference_year  = next((ext["valueDate"]
-                    for ext in record.get("extension", [])
-                    if "rfrnc_yr" in ext.get("url", "")), None)
+                        for ext in record.get("extension", [])
+                        if "rfrnc_yr" in ext.get("url", "")), None)
 
     # nested dict
     last_updated    = record.get("meta", {}).get("lastUpdated")
