@@ -24,5 +24,4 @@ casted as (
     from source
 )
 
-select *
-from casted
+select * from casted
