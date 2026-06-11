@@ -1,0 +1,49 @@
+version: 2
+
+models:
+  - name: dim_patient
+    columns:
+      - name: patient_id
+        tests:
+          - unique
+          - not_null
+
+  - name: fct_claims
+    columns:
+      - name: eob_id
+        tests:
+          - unique
+          - not_null
+      - name: patient_id
+        tests:
+          - not_null
+          - relationships:
+              config:
+                severity: error
+              to: ref('dim_patient')
+              field: patient_id
+      - name: total_payment
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 5000000
+              config:
+                severity: warn
+      - name: service_start_date
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: "'1980-01-01'"
+              max_value: "'2030-01-01'"
+              config:
+                severity: warn
+      - name: primary_diagnosis_code
+        tests:
+          - dbt_expectations.expect_column_value_lengths_to_be_between:
+              min_value: 3
+              max_value: 10
+
+  - name: fct_coverage
+    columns:
+      - name: patient_id
+        tests:
+          - not_null

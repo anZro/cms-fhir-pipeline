@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: stg_patient
+    columns:
+      - name: patient_id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_eob
+    columns:
+      - name: eob_id
+        tests:
+          - unique
+          - not_null
+      - name: patient_id
+        tests:
+          - not_null
+
+  - name: stg_coverage
+    columns:
+      - name: coverage_id
+        tests:
+          - unique
+          - not_null
+      - name: patient_id
+        tests:
+          - not_null
