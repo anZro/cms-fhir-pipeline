@@ -86,6 +86,11 @@ def transform_coverage(gcs_client, transaction_time: str, bucket_name:str = GCS_
     
     
     result_df = pd.DataFrame(rows)
+    # explicit typing for sparse columns — BCDA sandbox doesn't populate period dates
+    # pyarrow infers INT64 for all-null columns without explicit casting
+    result_df["period_start"] = result_df["period_start"].astype(str).where(result_df["period_start"].notna(), other=None)
+    result_df["period_end"] = result_df["period_end"].astype(str).where(result_df["period_end"].notna(), other=None)
+    result_df["dual_eligible"] = result_df["dual_eligible"].astype(str).where(result_df["dual_eligible"].notna(), other=None)
     
     #convert dataframe to parquet bytes in memory
     buffer = io.BytesIO()
