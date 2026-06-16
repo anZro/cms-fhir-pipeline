@@ -102,42 +102,26 @@ def bcda_pipeline():
         @task
         def download_patient(token, urls, transaction_time):
             gcs_client = storage.Client()
-            for item in urls:
-                if item["type"] == "Patient":
-                    download_to_gcs(
-                        token=token,
-                        url=item["url"],
-                        resource_type=item["type"],
-                        transaction_time=transaction_time,
-                        gcs_client=gcs_client,
-                        bucket_name=os.getenv("GCS_BUCKET")
-                    )
+            bucket_name = os.getenv("GCS_BUCKET")
+            bucket = gcs_client.bucket(bucket_name)
 
-        @task
-        def download_coverage(token, urls, transaction_time):
-            gcs_client = storage.Client()
-            for item in urls:
-                if item["type"] == "Coverage":
-                    download_to_gcs(
-                        token=token,
-                        url=item["url"],
-                        resource_type=item["type"],
-                        transaction_time=transaction_time,
-                        gcs_client=gcs_client,
-                        bucket_name=os.getenv("GCS_BUCKET")
-                    )
+            # clear any existing files under this prefix before downloading fresh —
+            # BCDA can return the same transaction_time across runs (e.g. static
+            # sandbox data), and UUID-named files would otherwise accumulate
+            # instead of overwriting
+            prefix = f"bronze/Patient/{transaction_time}/"
+            existing = list(bucket.list_blobs(prefix=prefix))
+            for blob in existing:
+                blob.delete()
+            if existing:
+                print(f"Cleared {len(existing)} existing files under {prefix}")
 
-        @task
-        def download_eob(token, urls, transaction_time):
-            from ingest.auth import get_token
             token = get_token(
                 client_id=os.getenv("BCDA_CLIENT_ID"),
                 client_secret=os.getenv("BCDA_CLIENT_SECRET")
             )
-            gcs_client = storage.Client()
             for item in urls:
-                if item["type"] == "ExplanationOfBenefit":
-                    # refresh token before each file in case the loop takes >19 min
+                if item["type"] == "Patient":
                     token = get_token(
                         client_id=os.getenv("BCDA_CLIENT_ID"),
                         client_secret=os.getenv("BCDA_CLIENT_SECRET")
@@ -148,7 +132,79 @@ def bcda_pipeline():
                         resource_type=item["type"],
                         transaction_time=transaction_time,
                         gcs_client=gcs_client,
-                        bucket_name=os.getenv("GCS_BUCKET")
+                        bucket_name=bucket_name
+                    )
+
+        @task
+        def download_coverage(token, urls, transaction_time):
+            gcs_client = storage.Client()
+            bucket_name = os.getenv("GCS_BUCKET")
+            bucket = gcs_client.bucket(bucket_name)
+
+            # clear any existing files under this prefix before downloading fresh —
+            # BCDA can return the same transaction_time across runs (e.g. static
+            # sandbox data), and UUID-named files would otherwise accumulate
+            # instead of overwriting
+            prefix = f"bronze/Coverage/{transaction_time}/"
+            existing = list(bucket.list_blobs(prefix=prefix))
+            for blob in existing:
+                blob.delete()
+            if existing:
+                print(f"Cleared {len(existing)} existing files under {prefix}")
+
+            token = get_token(
+                client_id=os.getenv("BCDA_CLIENT_ID"),
+                client_secret=os.getenv("BCDA_CLIENT_SECRET")
+            )
+            for item in urls:
+                if item["type"] == "Coverage":
+                    token = get_token(
+                        client_id=os.getenv("BCDA_CLIENT_ID"),
+                        client_secret=os.getenv("BCDA_CLIENT_SECRET")
+                    )
+                    download_to_gcs(
+                        token=token,
+                        url=item["url"],
+                        resource_type=item["type"],
+                        transaction_time=transaction_time,
+                        gcs_client=gcs_client,
+                        bucket_name=bucket_name
+                    )
+
+        @task
+        def download_eob(token, urls, transaction_time):
+            gcs_client = storage.Client()
+            bucket_name = os.getenv("GCS_BUCKET")
+            bucket = gcs_client.bucket(bucket_name)
+
+            # clear any existing files under this prefix before downloading fresh —
+            # BCDA can return the same transaction_time across runs (e.g. static
+            # sandbox data), and UUID-named files would otherwise accumulate
+            # instead of overwriting
+            prefix = f"bronze/ExplanationOfBenefit/{transaction_time}/"
+            existing = list(bucket.list_blobs(prefix=prefix))
+            for blob in existing:
+                blob.delete()
+            if existing:
+                print(f"Cleared {len(existing)} existing files under {prefix}")
+
+            token = get_token(
+                client_id=os.getenv("BCDA_CLIENT_ID"),
+                client_secret=os.getenv("BCDA_CLIENT_SECRET")
+            )
+            for item in urls:
+                if item["type"] == "ExplanationOfBenefit":
+                    token = get_token(
+                        client_id=os.getenv("BCDA_CLIENT_ID"),
+                        client_secret=os.getenv("BCDA_CLIENT_SECRET")
+                    )
+                    download_to_gcs(
+                        token=token,
+                        url=item["url"],
+                        resource_type=item["type"],
+                        transaction_time=transaction_time,
+                        gcs_client=gcs_client,
+                        bucket_name=bucket_name
                     )
 
         download_patient(token, urls, transaction_time)
