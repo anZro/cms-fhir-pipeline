@@ -18,10 +18,7 @@ models:
   dbt_fhir:
     staging:
       +materialized: view
-      +schema: bcda_fhir
     intermediate:
       +materialized: view
-      +schema: bcda_fhir
     marts:
       +materialized: table
-      +schema: bcda_fhir

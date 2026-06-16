@@ -39,3 +39,4 @@ airflow_settings.yaml
 # Astro / Airflow
 .astro/
 airflow_settings.yaml
+dbt_fhir/logs/
