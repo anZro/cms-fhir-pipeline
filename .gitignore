@@ -34,3 +34,8 @@ Thumbs.db
 .idea/
 .antigravity/
 .envrc
+airflow_settings.yaml
+
+# Astro / Airflow
+.astro/
+airflow_settings.yaml

@@ -60,6 +60,7 @@ def flatten_eob(record: dict) -> dict:
             if entry.get("category", {}).get("coding", [{}])[0].get("code") == "discharge-status"), None)
 
     diagnosis_json = json.dumps(record.get("diagnosis", []))
+    item_json = json.dumps(record.get("item", []))
     last_updated = record.get("meta", {}).get("lastUpdated")
 
     return {
@@ -74,6 +75,7 @@ def flatten_eob(record: dict) -> dict:
         "primary_diagnosis_code": primary_diagnosis_code,
         "primary_diagnosis_display": primary_diagnosis_display,
         "diagnosis_json": diagnosis_json,
+        "item_json": item_json,
         "last_updated": last_updated,
         "claim_type": claim_type,
         "claim_subtype": claim_subtype,
@@ -82,36 +84,37 @@ def flatten_eob(record: dict) -> dict:
     }
 
 
-def transform_eob(gcs_client, transaction_time: str, bucket_name:str = GCS_BUCKET):
+def transform_eob(gcs_client, transaction_time: str, bucket_name: str = GCS_BUCKET):
     bucket = gcs_client.bucket(bucket_name)
-    blobs = bucket.list_blobs(
-        prefix=f"bronze/ExplanationOfBenefit/{transaction_time}"
-    )
+    blobs = list(bucket.list_blobs(prefix=f"bronze/ExplanationOfBenefit/{transaction_time}"))
+    blobs = [b for b in blobs if b.name.endswith(".ndjson")]
 
-    rows = []
-    for blob in blobs:
-        if blob.name.endswith(".ndjson"):
-            with blob.open("rt") as f:
-                for line in f:
-                    record = json.loads(line)
-                    flattened = flatten_eob(record)
-                    rows.append(flattened)
-    
-    
-    result_df = pd.DataFrame(rows)
-    
-    #convert dataframe to parquet bytes in memory
-    buffer = io.BytesIO()
-    result_df.to_parquet(buffer, index=False, engine="pyarrow")
-    buffer.seek(0)
-    
-    #upload to GCS
-    blob = bucket.blob(f"silver/ExplanationOfBenefit/{transaction_time}/eob.parquet")
-    blob.upload_from_file(buffer, content_type="application/octet-stream")
-    logger.info("eob_transform_complete",
-                bucket_name=bucket_name,
-                row_count=len(result_df),
-                file_path=f"silver/ExplanationOfBenefit/{transaction_time}/eob.parquet")
+    if not blobs:
+        logger.warning("eob_transform_skipped", reason="no records found")
+        return
+
+    total_rows = 0
+    for i, blob in enumerate(blobs):
+        rows = []
+        with blob.open("rt") as f:
+            for line in f:
+                if line.strip():
+                    rows.append(flatten_eob(json.loads(line)))
+
+        df_chunk = pd.DataFrame(rows)
+        total_rows += len(df_chunk)
+
+        buffer = io.BytesIO()
+        df_chunk.to_parquet(buffer, index=False, engine="pyarrow")
+        buffer.seek(0)
+
+        out_blob = bucket.blob(f"silver/ExplanationOfBenefit/{transaction_time}/eob_part_{i:04d}.parquet")
+        out_blob.upload_from_file(buffer, content_type="application/octet-stream")
+
+        logger.info("eob_blob_processed", blob=blob.name, row_count=len(df_chunk))
+        del rows, df_chunk
+
+    logger.info("eob_transform_complete", row_count=total_rows, file_count=len(blobs))
     
 if __name__ == "__main__":
     from google.cloud import storage

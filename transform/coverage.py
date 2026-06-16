@@ -74,18 +74,36 @@ def transform_coverage(gcs_client, transaction_time: str, bucket_name:str = GCS_
     blobs = bucket.list_blobs(
         prefix=f"bronze/Coverage/{transaction_time}"
     )
+    blobs = [b for b in blobs if b.name.endswith(".ndjson")]
 
-    rows = []
+    if not blobs:
+        logger.warning("coverage_transform_skipped", reason="no records found")
+        return
+
+    all_rows = []
     for blob in blobs:
-        if blob.name.endswith(".ndjson"):
-            with blob.open("rt") as f:
+        rows = []
+        with blob.open("rt") as f:
                 for line in f:
                     record = json.loads(line)
                     flattened = flatten_coverage(record)
                     rows.append(flattened)
+        all_rows.extend(rows)
+        logger.info("coverage_blob_processed",
+            blob=blob.name,
+            row_count=len(rows)
+        )
+        del rows  # free memory after each blob
     
+    if len(all_rows) == 0:
+        logger.warning("coverage_transform_skipped",
+            reason="no records found",
+            transaction_time=transaction_time
+        )
+        return
     
-    result_df = pd.DataFrame(rows)
+    result_df = pd.DataFrame(all_rows)
+    del all_rows  # free memory
     # explicit typing for sparse columns — BCDA sandbox doesn't populate period dates
     # pyarrow infers INT64 for all-null columns without explicit casting
     result_df["period_start"] = result_df["period_start"].astype(str).where(result_df["period_start"].notna(), other=None)

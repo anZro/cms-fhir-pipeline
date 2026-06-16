@@ -5,3 +5,4 @@ pandas
 pyarrow
 python-dotenv
 structlog
+dbt-bigquery

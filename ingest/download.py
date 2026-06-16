@@ -25,7 +25,7 @@ def download_to_gcs(token, url: str, resource_type: str, transaction_time: str, 
                 resource_type=resource_type,
                 url=url
                 )
-        with requests.get(url, headers=headers, stream=True, timeout=300) as resp:
+        with requests.get(url, headers=headers, stream=True, timeout=1200) as resp:
             resp.raise_for_status()
             with blob.open("wb") as f:
                 for chunk in resp.iter_content(chunk_size=8192):

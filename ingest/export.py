@@ -4,6 +4,7 @@ import structlog
 import os
 import time
 from dotenv import load_dotenv
+from ingest.auth import get_token
 
 load_dotenv()
 
@@ -69,23 +70,28 @@ def start_export(token, base_url: str = BCDA_BASE_URL, since=None) -> str:
         )
         raise
 
-def poll_job(token, job_url, poll_interval=30) -> ExportResult:
-    headers = {
-        "Authorization": f"Bearer {token}",
-    }
-
+def poll_job(token, job_url, poll_interval=30, client_id=None, client_secret=None) -> ExportResult:
     try:
-        attempts = 0
+        poll_count = 0
         while True:
-            attempts += 1
-            response = requests.get(job_url, headers=headers, timeout=30)
+            poll_count += 1
+
+            # refresh token if needed
+            if client_id and client_secret:
+                token = get_token(client_id=client_id, client_secret=client_secret)
             
+            #redefine headers to send the new token
+            headers = {
+                "Authorization": f"Bearer {token}",
+            }
+            
+            response = requests.get(job_url, headers=headers, timeout=30)
             progress = response.headers.get("X-Progress", "unknown")
 
             if response.status_code == 202:
                 logger.info("export_job_in_progress",
                 progress=progress,
-                attempts=attempts,
+                poll_count=poll_count,
                 )
                 time.sleep(poll_interval)
 
