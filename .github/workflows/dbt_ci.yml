@@ -20,12 +20,17 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install dbt-bigquery dbt-expectations
+          pip install dbt-bigquery
 
       - name: Authenticate to GCP
+        id: auth
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: dbt deps
+        working-directory: dbt_fhir
+        run: dbt deps
 
       - name: dbt compile
         working-directory: dbt_fhir
