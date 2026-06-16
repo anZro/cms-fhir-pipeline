@@ -93,6 +93,15 @@ def transform_eob(gcs_client, transaction_time: str, bucket_name: str = GCS_BUCK
         logger.warning("eob_transform_skipped", reason="no records found")
         return
 
+    # clear existing Silver part files before writing new ones — prevents
+    # accumulation across repeated runs against the same transaction_time
+    silver_prefix = f"silver/ExplanationOfBenefit/{transaction_time}/"
+    existing_silver = list(bucket.list_blobs(prefix=silver_prefix))
+    for blob in existing_silver:
+        blob.delete()
+    if existing_silver:
+        logger.info("eob_silver_cleared", count=len(existing_silver), prefix=silver_prefix)
+
     total_rows = 0
     for i, blob in enumerate(blobs):
         rows = []
